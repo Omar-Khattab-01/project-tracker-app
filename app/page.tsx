@@ -1,7 +1,7 @@
-import { TrackerApp } from '@/components/tracker-app';
+import { CloudTracker } from '@/components/cloud-tracker';
 
 export const dynamic = 'force-static';
 
 export default function Home() {
-  return <TrackerApp />;
+  return <CloudTracker />;
 }

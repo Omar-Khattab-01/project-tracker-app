@@ -4,7 +4,7 @@ import { defineConfig } from 'vite';
 import { fileURLToPath, URL } from 'node:url';
 
 export default defineConfig({
-  base: '/project-tracker-app/',
+  base: process.env.DEPLOY_TARGET === 'firebase' ? '/' : '/project-tracker-app/',
   css: { postcss: { plugins: [tailwindcss()] } },
   plugins: [react()],
   resolve: { alias: { '@': fileURLToPath(new URL('.', import.meta.url)) } },

@@ -19,7 +19,6 @@ import {
   X,
 } from 'lucide-react';
 import {
-  seedProjects,
   projectMetrics,
   taskStatus,
   todayIso,
@@ -36,7 +35,6 @@ const nav = [
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 const priorities: Priority[] = ['Low', 'Normal', 'High', 'Critical'];
-const storageKey = 'project-tracker:v1';
 const fmt = (d?: string | null, year = false) =>
   d
     ? new Intl.DateTimeFormat('en-CA', {
@@ -45,7 +43,6 @@ const fmt = (d?: string | null, year = false) =>
         ...(year ? { year: 'numeric' } : {}),
       }).format(new Date(d + 'T12:00:00'))
     : '—';
-const cloneSeed = () => structuredClone(seedProjects);
 function Badge({ value }: { value: string }) {
   return (
     <span className={`badge badge-${value.toLowerCase().replaceAll(' ', '-')}`}>
@@ -53,29 +50,21 @@ function Badge({ value }: { value: string }) {
     </span>
   );
 }
-function sync(_action: string, _payload: unknown) {}
 
-export function TrackerApp() {
+export function TrackerApp({
+  projects,
+  setProjects,
+}: {
+  projects: TrackerProject[];
+  setProjects: React.Dispatch<React.SetStateAction<TrackerProject[]>>;
+}) {
   const [section, setSection] = useState('dashboard');
   const [query, setQuery] = useState('');
-  const [projects, setProjects] = useState<TrackerProject[]>(cloneSeed);
-  const [storageReady, setStorageReady] = useState(false);
   const [projectDialog, setProjectDialog] = useState(false);
   const [taskEditor, setTaskEditor] = useState<{
     projectId: number;
     task: TrackerTask | null;
   } | null>(null);
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) setProjects(JSON.parse(saved) as TrackerProject[]);
-    } catch {}
-    setStorageReady(true);
-  }, []);
-  useEffect(() => {
-    if (!storageReady) return;
-    localStorage.setItem(storageKey, JSON.stringify(projects));
-  }, [projects, storageReady]);
   useEffect(() => {
     const context = (
       document as Document & {
@@ -137,7 +126,6 @@ export function TrackerApp() {
                 p.id === x.projectId ? { ...p, tasks: [...p.tasks, task] } : p,
               ),
             );
-            void sync('saveTask', task);
             return { id: task.id, status: 'created' };
           },
         },
@@ -145,7 +133,7 @@ export function TrackerApp() {
       ),
     );
     return () => controller.abort();
-  }, [projects]);
+  }, [projects, setProjects]);
   const active = projects.filter((p) => !p.archived),
     activeTasks = active
       .flatMap((p) => p.tasks)
@@ -179,12 +167,10 @@ export function TrackerApp() {
           : p,
       ),
     );
-    void sync('saveTask', task);
     setTaskEditor(null);
   };
   const saveProject = (p: TrackerProject) => {
     setProjects((ps) => [...ps, p]);
-    void sync('saveProject', p);
     setProjectDialog(false);
   };
   const page = {
@@ -239,14 +225,20 @@ export function TrackerApp() {
         </nav>
         <div className="sidebar-foot">
           <span>Portfolio</span>
-          <strong>2026 delivery plan</strong>
-          <small>Example starter portfolio</small>
+          <strong>Your project portfolio</strong>
+          <small>Private cloud workspace</small>
         </div>
       </aside>
       <main className="main">
         <header className="topbar">
           <div>
-            <p>Thursday, September 3</p>
+            <p>
+              {new Date().toLocaleDateString('en-CA', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </p>
             <h1>{nav.find((n) => n.id === section)?.label}</h1>
           </div>
           <div className="top-actions">
@@ -261,14 +253,13 @@ export function TrackerApp() {
             <button
               className="primary"
               onClick={() =>
-                section === 'projects'
+                section === 'projects' && active.length > 0
                   ? setTaskEditor({ projectId: active[0]?.id || 1, task: null })
                   : setProjectDialog(true)
               }
             >
               <Plus size={16} /> New item
             </button>
-            <div className="avatar">OK</div>
           </div>
         </header>
         {page}
@@ -339,7 +330,7 @@ function Dashboard({
           cls="warning"
           label="Due within 7 days"
           value={metrics.week}
-          note={`Next 30 days: ${metrics.week + 4}`}
+          note="Upcoming task deadlines"
         />
         <article>
           <span>Overall completion</span>
@@ -554,7 +545,6 @@ function ProjectsView({
     setProjects((ps) =>
       ps.map((p) => (p.id === id ? { ...p, archived: true } : p)),
     );
-    void sync('archiveProject', { id, archived: true });
   };
   return (
     <div className="content">
@@ -565,6 +555,7 @@ function ProjectsView({
         </div>
         <button
           className="primary"
+          disabled={projects.length === 0}
           onClick={() => editTask(projects[0]?.id || 1, null)}
         >
           <Plus size={15} /> Add task
@@ -852,7 +843,6 @@ function ArchiveView({
     setProjects((ps) =>
       ps.map((p) => (p.id === id ? { ...p, archived: false } : p)),
     );
-    void sync('archiveProject', { id, archived: false });
   };
   const restoreTask = (pId: number, id: number) => {
     setProjects((ps) =>
@@ -867,7 +857,6 @@ function ArchiveView({
           : p,
       ),
     );
-    void sync('archiveTask', { id, archived: false });
   };
   return (
     <div className="content">
@@ -949,7 +938,10 @@ function SettingsView() {
       <section className="heading-row">
         <div>
           <h2>Preferences</h2>
-          <p>Lightweight defaults for this single-user workspace.</p>
+          <p>
+            Display defaults. Your project data is private to your signed-in
+            account.
+          </p>
         </div>
       </section>
       <section className="panel settings-panel">
