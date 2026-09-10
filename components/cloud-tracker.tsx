@@ -23,7 +23,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { seedProjects, type TrackerProject } from '@/lib/tracker-data';
+import type { TrackerProject } from '@/lib/tracker-data';
 import { TrackerApp } from './tracker-app';
 import '@/app/auth.css';
 
@@ -318,14 +318,6 @@ function Workspace({ user }: { user: User }) {
                 ? 'Cloud connected'
                 : 'Connecting…'}
         </output>
-        {ready && !projects.length && (
-          <button
-            disabled={busy}
-            onClick={() => update(structuredClone(seedProjects))}
-          >
-            Load example portfolio
-          </button>
-        )}
         <button disabled={!ready || busy} onClick={exportData}>
           Export backup
         </button>
