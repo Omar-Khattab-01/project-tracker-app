@@ -160,11 +160,6 @@ function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          {mode === 'signup' && (
-            <span className="field-hint">
-              City email addresses (@ottawa.ca) are not allowed.
-            </span>
-          )}
         </label>
         <label htmlFor={`${mode}-password`}>
           Password
