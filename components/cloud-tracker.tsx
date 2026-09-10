@@ -76,8 +76,15 @@ function Login() {
   async function submit(event: { preventDefault(): void }) {
     event.preventDefault();
     const cleanName = name.trim();
+    const cleanEmail = email.trim();
     if (mode === 'signup' && !cleanName) {
       setMessage('Enter your full name.');
+      return;
+    }
+    if (mode === 'signup' && /@ottawa\.ca$/i.test(cleanEmail)) {
+      setMessage(
+        'City email addresses are not allowed. Use a personal email address.',
+      );
       return;
     }
     if (mode === 'signup' && password !== confirmPassword) {
@@ -90,11 +97,11 @@ function Login() {
       if (mode === 'signup') {
         const credential = await createUserWithEmailAndPassword(
           auth,
-          email.trim(),
+          cleanEmail,
           password,
         );
         await updateProfile(credential.user, { displayName: cleanName });
-      } else await signInWithEmailAndPassword(auth, email.trim(), password);
+      } else await signInWithEmailAndPassword(auth, cleanEmail, password);
     } catch (error) {
       setMessage(errorMessage(error));
     } finally {
@@ -153,6 +160,11 @@ function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
+          {mode === 'signup' && (
+            <span className="field-hint">
+              City email addresses (@ottawa.ca) are not allowed.
+            </span>
+          )}
         </label>
         <label htmlFor={`${mode}-password`}>
           Password
