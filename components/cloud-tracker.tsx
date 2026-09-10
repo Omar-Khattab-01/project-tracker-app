@@ -13,6 +13,7 @@ import {
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
+  updateProfile,
   type User,
 } from 'firebase/auth';
 import {
@@ -58,18 +59,42 @@ export function CloudTracker() {
 
 function Login() {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  function changeMode(nextMode: 'login' | 'signup') {
+    setMode(nextMode);
+    setName('');
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setMessage('');
+  }
   async function submit(event: { preventDefault(): void }) {
     event.preventDefault();
+    const cleanName = name.trim();
+    if (mode === 'signup' && !cleanName) {
+      setMessage('Enter your full name.');
+      return;
+    }
+    if (mode === 'signup' && password !== confirmPassword) {
+      setMessage('Passwords do not match.');
+      return;
+    }
     setBusy(true);
     setMessage('');
     try {
-      if (mode === 'signup')
-        await createUserWithEmailAndPassword(auth, email.trim(), password);
-      else await signInWithEmailAndPassword(auth, email.trim(), password);
+      if (mode === 'signup') {
+        const credential = await createUserWithEmailAndPassword(
+          auth,
+          email.trim(),
+          password,
+        );
+        await updateProfile(credential.user, { displayName: cleanName });
+      } else await signInWithEmailAndPassword(auth, email.trim(), password);
     } catch (error) {
       setMessage(errorMessage(error));
     } finally {
@@ -95,7 +120,7 @@ function Login() {
   }
   return (
     <main className="login-page">
-      <form className="login-card" onSubmit={submit}>
+      <form className="login-card" onSubmit={submit} key={mode}>
         <div className="login-mark">P</div>
         <h1>Project Tracker</h1>
         <p>
@@ -103,9 +128,25 @@ function Login() {
           available across devices.
         </p>
         <h2>{mode === 'login' ? 'Welcome back' : 'Create your account'}</h2>
-        <label>
+        {mode === 'signup' && (
+          <label htmlFor="signup-name">
+            Full name
+            <input
+              id="signup-name"
+              name="name"
+              type="text"
+              autoComplete="name"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </label>
+        )}
+        <label htmlFor={`${mode}-email`}>
           Email
           <input
+            id={`${mode}-email`}
+            name={`${mode}-email`}
             type="email"
             autoComplete="email"
             required
@@ -113,9 +154,11 @@ function Login() {
             onChange={(e) => setEmail(e.target.value)}
           />
         </label>
-        <label>
+        <label htmlFor={`${mode}-password`}>
           Password
           <input
+            id={`${mode}-password`}
+            name={`${mode}-password`}
             type="password"
             autoComplete={
               mode === 'login' ? 'current-password' : 'new-password'
@@ -125,7 +168,25 @@ function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+          {mode === 'signup' && (
+            <span className="field-hint">Use at least 8 characters.</span>
+          )}
         </label>
+        {mode === 'signup' && (
+          <label htmlFor="signup-confirm-password">
+            Confirm password
+            <input
+              id="signup-confirm-password"
+              name="signup-confirm-password"
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+          </label>
+        )}
         <button className="primary" disabled={busy}>
           {busy
             ? 'Please wait…'
@@ -137,24 +198,27 @@ function Login() {
           className="text-button"
           type="button"
           disabled={busy}
-          onClick={() => {
-            setMode(mode === 'login' ? 'signup' : 'login');
-            setMessage('');
-          }}
+          onClick={() => changeMode(mode === 'login' ? 'signup' : 'login')}
         >
           {mode === 'login'
             ? 'New here? Create an account'
             : 'Already registered? Sign in'}
         </button>
-        <button
-          className="text-button"
-          type="button"
-          disabled={busy}
-          onClick={() => void resetPassword()}
-        >
-          Forgot password?
-        </button>
-        {message && <output>{message}</output>}
+        {mode === 'login' && (
+          <button
+            className="text-button"
+            type="button"
+            disabled={busy}
+            onClick={() => void resetPassword()}
+          >
+            Forgot password?
+          </button>
+        )}
+        {message && (
+          <output className="auth-message" aria-live="polite">
+            {message}
+          </output>
+        )}
         <small>
           Each account has its own private data. No automatic import from your
           browser.
