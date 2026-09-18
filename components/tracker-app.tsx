@@ -1118,7 +1118,12 @@ function TaskSheet({
           </label>
           <label>
             Task / deliverable name
-            <input id="t-name" defaultValue={existing?.name} />
+            <textarea
+              id="t-name"
+              className="task-name-input"
+              rows={4}
+              defaultValue={existing?.name}
+            />
           </label>
           <div className="form-grid">
             <label>

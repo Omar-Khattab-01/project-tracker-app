@@ -1,0 +1,18 @@
+.task-sheet {
+  width: min(620px, calc(100vw - 32px)) !important;
+  max-width: 620px !important;
+}
+
+.sheet-form .task-name-input {
+  height: auto;
+  min-height: 110px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+@media (max-width: 680px) {
+  .task-sheet {
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
+}
