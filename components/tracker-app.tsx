@@ -1156,10 +1156,20 @@ function TaskSheet({
   close: () => void;
   save: (t: TrackerTask) => void;
 }) {
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    setProgress(editor?.task?.percentComplete ?? 0);
+  }, [editor]);
   if (!editor) return null;
   const existing = editor.task;
   const get = (id: string) =>
     (document.querySelector(id) as unknown as { value: string }).value;
+  const updateProgress = (value: string) => {
+    const nextProgress = Number(value);
+    if (!Number.isNaN(nextProgress)) {
+      setProgress(Math.min(100, Math.max(0, Math.round(nextProgress))));
+    }
+  };
   return (
     <div
       className="overlay sheet-overlay"
@@ -1251,16 +1261,33 @@ function TaskSheet({
               />
             </label>
           </div>
-          <label>
-            Percent complete <output>{existing?.percentComplete || 0}%</output>
-            <input
-              id="t-progress"
-              type="range"
-              min="0"
-              max="100"
-              step="5"
-              defaultValue={existing?.percentComplete || 0}
-            />
+          <label className="progress-control">
+            <span className="progress-label">
+              Percent complete <output>{progress}%</output>
+            </span>
+            <span className="progress-inputs">
+              <input
+                id="t-progress"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={progress}
+                onChange={(event) => updateProgress(event.target.value)}
+              />
+              <span className="progress-number">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={progress}
+                  aria-label="Percent complete"
+                  onChange={(event) => updateProgress(event.target.value)}
+                />
+                <span>%</span>
+              </span>
+            </span>
           </label>
           <label>
             Owner

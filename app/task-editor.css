@@ -10,6 +10,52 @@
   resize: vertical;
 }
 
+.progress-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.progress-label output {
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.progress-inputs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 84px;
+  gap: 12px;
+  align-items: center;
+}
+
+.sheet-form .progress-inputs > input[type='range'] {
+  width: 100%;
+}
+
+.progress-number {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.sheet-form .progress-number input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  text-align: right;
+}
+
+.progress-number > span {
+  padding-right: 9px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
 @media (max-width: 680px) {
   .task-sheet {
     width: 100vw !important;
