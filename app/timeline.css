@@ -2,7 +2,41 @@
   --timeline-label-width: 330px;
   --timeline-track-width: 800px;
   --timeline-period-width: 160px;
-  max-height: calc(100vh - 160px);
+  overflow: hidden;
+  position: relative;
+}
+
+.timeline-scrollbar {
+  height: 18px;
+  overflow-x: scroll;
+  overflow-y: hidden;
+  background: #f7f8f7;
+  border-bottom: 1px solid var(--line);
+  scrollbar-color: #7f9189 #e5eae7;
+  scrollbar-width: auto;
+}
+
+.timeline-scrollbar::-webkit-scrollbar {
+  height: 12px;
+}
+
+.timeline-scrollbar::-webkit-scrollbar-track {
+  background: #e5eae7;
+}
+
+.timeline-scrollbar::-webkit-scrollbar-thumb {
+  background: #7f9189;
+  border: 2px solid #e5eae7;
+  border-radius: 999px;
+}
+
+.timeline-scrollbar-spacer {
+  width: calc(var(--timeline-label-width) + var(--timeline-track-width));
+  height: 1px;
+}
+
+.timeline-viewport {
+  max-height: calc(100vh - 178px);
   overflow: auto;
   position: relative;
 }

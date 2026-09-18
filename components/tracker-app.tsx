@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Archive,
   CalendarRange,
@@ -711,6 +711,8 @@ function Timeline({
   editTask: (p: number, t: TrackerTask) => void;
 }) {
   const [view, setView] = useState<'Week' | 'Month'>('Month');
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const timelineViewportRef = useRef<HTMLDivElement>(null);
   const scheduleDates = projects
     .flatMap((project) => [
       project.startDate,
@@ -803,75 +805,100 @@ function Timeline({
         </div>
       </section>
       <section className="timeline panel" style={timelineStyle}>
-        <div className="timeline-head">
-          <div>Project / task</div>
-          <div className="months">
-            {periods.map((period) => (
-              <span key={period.key}>{period.label}</span>
+        <div
+          className="timeline-scrollbar"
+          ref={topScrollRef}
+          aria-label="Scroll timeline horizontally"
+          onScroll={(event) => {
+            if (timelineViewportRef.current) {
+              timelineViewportRef.current.scrollLeft =
+                event.currentTarget.scrollLeft;
+            }
+          }}
+        >
+          <div className="timeline-scrollbar-spacer" />
+        </div>
+        <div
+          className="timeline-viewport"
+          ref={timelineViewportRef}
+          onScroll={(event) => {
+            if (topScrollRef.current) {
+              topScrollRef.current.scrollLeft = event.currentTarget.scrollLeft;
+            }
+          }}
+        >
+          <div className="timeline-head">
+            <div>Project / task</div>
+            <div className="months">
+              {periods.map((period) => (
+                <span key={period.key}>{period.label}</span>
+              ))}
+            </div>
+          </div>
+          <div className="timeline-body">
+            <div
+              className="today-line"
+              style={{
+                left: `${330 + trackWidth * (pos(todayIso) / 100)}px`,
+              }}
+            >
+              <span>Today</span>
+            </div>
+            {projects.map((p) => (
+              <div key={p.id}>
+                <div className="gantt-project">
+                  <div>
+                    <ChevronDown size={14} />
+                    <strong>{p.name}</strong>
+                    <Badge value={projectMetrics(p).health} />
+                  </div>
+                  <div className="project-track">
+                    <i
+                      style={{
+                        left: `${pos(p.startDate)}%`,
+                        width: `${Math.max(1, pos(p.targetEndDate) - pos(p.startDate))}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+                {p.tasks
+                  .filter((t) => !t.archived || t.percentComplete < 100)
+                  .map((t) => (
+                    <button
+                      className="gantt-task"
+                      key={t.id}
+                      onClick={() => editTask(p.id, t)}
+                    >
+                      <div>
+                        <span>{t.type === 'Milestone' ? '◆' : '—'}</span>
+                        <strong>{t.name}</strong>
+                        <small>{fmt(t.dueDate)}</small>
+                      </div>
+                      <div className="task-track">
+                        {t.type === 'Milestone' ? (
+                          <i
+                            className="diamond"
+                            style={{ left: `${pos(t.dueDate)}%` }}
+                          />
+                        ) : (
+                          <i
+                            className={
+                              taskStatus(t) === 'Overdue' ? 'late' : ''
+                            }
+                            style={{
+                              left: `${pos(t.startDate)}%`,
+                              width: `${Math.max(1, pos(t.dueDate) - pos(t.startDate))}%`,
+                            }}
+                          >
+                            <b style={{ width: `${t.percentComplete}%` }} />
+                          </i>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+              </div>
             ))}
           </div>
-        </div>
-        <div className="timeline-body">
-          <div
-            className="today-line"
-            style={{
-              left: `${330 + trackWidth * (pos(todayIso) / 100)}px`,
-            }}
-          >
-            <span>Today</span>
-          </div>
-          {projects.map((p) => (
-            <div key={p.id}>
-              <div className="gantt-project">
-                <div>
-                  <ChevronDown size={14} />
-                  <strong>{p.name}</strong>
-                  <Badge value={projectMetrics(p).health} />
-                </div>
-                <div className="project-track">
-                  <i
-                    style={{
-                      left: `${pos(p.startDate)}%`,
-                      width: `${Math.max(1, pos(p.targetEndDate) - pos(p.startDate))}%`,
-                    }}
-                  />
-                </div>
-              </div>
-              {p.tasks
-                .filter((t) => !t.archived || t.percentComplete < 100)
-                .map((t) => (
-                  <button
-                    className="gantt-task"
-                    key={t.id}
-                    onClick={() => editTask(p.id, t)}
-                  >
-                    <div>
-                      <span>{t.type === 'Milestone' ? '◆' : '—'}</span>
-                      <strong>{t.name}</strong>
-                      <small>{fmt(t.dueDate)}</small>
-                    </div>
-                    <div className="task-track">
-                      {t.type === 'Milestone' ? (
-                        <i
-                          className="diamond"
-                          style={{ left: `${pos(t.dueDate)}%` }}
-                        />
-                      ) : (
-                        <i
-                          className={taskStatus(t) === 'Overdue' ? 'late' : ''}
-                          style={{
-                            left: `${pos(t.startDate)}%`,
-                            width: `${Math.max(1, pos(t.dueDate) - pos(t.startDate))}%`,
-                          }}
-                        >
-                          <b style={{ width: `${t.percentComplete}%` }} />
-                        </i>
-                      )}
-                    </div>
-                  </button>
-                ))}
-            </div>
-          ))}
         </div>
       </section>
     </div>
