@@ -8,6 +8,9 @@ export type TrackerTask = {
   owner: string;
   startDate: string | null;
   dueDate: string | null;
+  workDays?: number | null;
+  baselineStartDate?: string | null;
+  baselineEndDate?: string | null;
   percentComplete: number;
   priority: Priority;
   manualStatusOverride: 'On Hold' | 'Cancelled' | null;
@@ -15,6 +18,8 @@ export type TrackerTask = {
   sortOrder: number;
   archived: boolean;
   predecessor?: number | null;
+  dependencyType?: 'FS' | 'SS' | 'FF' | 'SF' | null;
+  dependencyLag?: number | null;
 };
 export type TrackerProject = {
   id: number;

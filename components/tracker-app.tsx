@@ -636,6 +636,7 @@ function ProjectsView({
                         <th>Type</th>
                         <th>Start</th>
                         <th>Due</th>
+                        <th>Work days</th>
                         <th>Progress</th>
                         <th>Priority</th>
                         <th>Status</th>
@@ -663,6 +664,7 @@ function ProjectsView({
                             <td>{t.type}</td>
                             <td>{fmt(t.startDate)}</td>
                             <td>{fmt(t.dueDate)}</td>
+                            <td>{t.workDays ?? '—'}</td>
                             <td>
                               <Progress value={t.percentComplete} />
                             </td>
@@ -1138,6 +1140,17 @@ function TaskSheet({
               </select>
             </label>
           </div>
+          <label>
+            Work days
+            <input
+              id="t-work-days"
+              type="number"
+              min="1"
+              step="1"
+              defaultValue={existing?.workDays || ''}
+              placeholder="Calculated duration"
+            />
+          </label>
           <div className="form-grid">
             <label>
               Start date
@@ -1203,6 +1216,9 @@ function TaskSheet({
                 owner: get('#t-owner'),
                 startDate: get('#t-start') || null,
                 dueDate: get('#t-due') || null,
+                workDays: get('#t-work-days')
+                  ? Number(get('#t-work-days'))
+                  : null,
                 percentComplete: Number(get('#t-progress')),
                 priority: get('#t-priority') as Priority,
                 manualStatusOverride: (get('#t-status') ||
@@ -1210,6 +1226,11 @@ function TaskSheet({
                 notes: get('#t-notes'),
                 sortOrder: existing?.sortOrder || 999,
                 archived: existing?.archived || false,
+                baselineStartDate: existing?.baselineStartDate || null,
+                baselineEndDate: existing?.baselineEndDate || null,
+                predecessor: existing?.predecessor || null,
+                dependencyType: existing?.dependencyType || null,
+                dependencyLag: existing?.dependencyLag || null,
               });
             }}
           >
