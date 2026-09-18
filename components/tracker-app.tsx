@@ -44,6 +44,16 @@ const fmt = (d?: string | null, year = false) =>
         ...(year ? { year: 'numeric' } : {}),
       }).format(new Date(d + 'T12:00:00'))
     : '—';
+const businessDueDate = (startDate: string, workDays: number) => {
+  const cursor = new Date(`${startDate}T00:00:00Z`);
+  let daysCounted = 0;
+  while (daysCounted < workDays) {
+    const day = cursor.getUTCDay();
+    if (day !== 0 && day !== 6) daysCounted += 1;
+    if (daysCounted < workDays) cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return cursor.toISOString().slice(0, 10);
+};
 function Badge({ value }: { value: string }) {
   return (
     <span className={`badge badge-${value.toLowerCase().replaceAll(' ', '-')}`}>
@@ -533,6 +543,9 @@ function ProjectsView({
   const [status, setStatus] = useState('All statuses');
   const [priority, setPriority] = useState('All priorities');
   const [hideCompleted, setHideCompleted] = useState(false);
+  const [taskOrder, setTaskOrder] = useState<
+    'Created' | 'Start date' | 'Due date'
+  >('Created');
   const filtered = projects.filter((p) => {
     const hay = (
       p.name +
@@ -597,11 +610,25 @@ function ProjectsView({
             <option key={x}>{x}</option>
           ))}
         </select>
+        <select
+          value={taskOrder}
+          aria-label="Task order"
+          onChange={(e) =>
+            setTaskOrder(
+              e.target.value as 'Created' | 'Start date' | 'Due date',
+            )
+          }
+        >
+          <option value="Created">Order: Created</option>
+          <option value="Start date">Order: Start date</option>
+          <option value="Due date">Order: Due date</option>
+        </select>
         <button
           onClick={() => {
             setStatus('All statuses');
             setPriority('All priorities');
             setHideCompleted(false);
+            setTaskOrder('Created');
           }}
         >
           <RotateCcw size={13} /> Reset
@@ -679,6 +706,25 @@ function ProjectsView({
                             (!t.archived || t.percentComplete < 100) &&
                             (!hideCompleted || t.percentComplete < 100),
                         )
+                        .sort((a, b) => {
+                          if (taskOrder === 'Created') {
+                            return (
+                              (a.sortOrder || a.id) - (b.sortOrder || b.id)
+                            );
+                          }
+                          const aDate =
+                            taskOrder === 'Start date'
+                              ? a.startDate
+                              : a.dueDate;
+                          const bDate =
+                            taskOrder === 'Start date'
+                              ? b.startDate
+                              : b.dueDate;
+                          if (!aDate && !bDate) return 0;
+                          if (!aDate) return 1;
+                          if (!bDate) return -1;
+                          return aDate.localeCompare(bDate);
+                        })
                         .map((t) => (
                           <tr key={t.id}>
                             <td>
@@ -1201,8 +1247,14 @@ function TaskSheet({
   inline?: boolean;
 }) {
   const [progress, setProgress] = useState(0);
+  const [startDate, setStartDate] = useState(todayIso);
+  const [workDays, setWorkDays] = useState('');
+  const [dueDate, setDueDate] = useState('');
   useEffect(() => {
     setProgress(editor?.task?.percentComplete ?? 0);
+    setStartDate(editor?.task?.startDate || todayIso);
+    setWorkDays(editor?.task?.workDays?.toString() || '');
+    setDueDate(editor?.task?.dueDate || '');
   }, [editor]);
   if (!editor) return null;
   const existing = editor.task;
@@ -1212,6 +1264,17 @@ function TaskSheet({
     const nextProgress = Number(value);
     if (!Number.isNaN(nextProgress)) {
       setProgress(Math.min(100, Math.max(0, Math.round(nextProgress))));
+    }
+  };
+  const updateDueDate = (nextStartDate: string, nextWorkDays: string) => {
+    const duration = Number(nextWorkDays);
+    if (
+      nextStartDate &&
+      Number.isInteger(duration) &&
+      duration > 0 &&
+      duration <= 10000
+    ) {
+      setDueDate(businessDueDate(nextStartDate, duration));
     }
   };
   const form = (
@@ -1277,9 +1340,14 @@ function TaskSheet({
             id="t-work-days"
             type="number"
             min="1"
+            max="10000"
             step="1"
-            defaultValue={existing?.workDays || ''}
+            value={workDays}
             placeholder="Calculated duration"
+            onChange={(event) => {
+              setWorkDays(event.target.value);
+              updateDueDate(startDate, event.target.value);
+            }}
           />
         </label>
         <div className="form-grid">
@@ -1288,15 +1356,20 @@ function TaskSheet({
             <input
               id="t-start"
               type="date"
-              defaultValue={existing?.startDate || todayIso}
+              value={startDate}
+              onChange={(event) => {
+                setStartDate(event.target.value);
+                updateDueDate(event.target.value, workDays);
+              }}
             />
           </label>
           <label>
-            Due date
+            Due date (weekends skipped)
             <input
               id="t-due"
               type="date"
-              defaultValue={existing?.dueDate || ''}
+              value={dueDate}
+              onChange={(event) => setDueDate(event.target.value)}
             />
           </label>
         </div>
