@@ -1,0 +1,7 @@
+.filterbar button.on {
+  padding: 6px 8px;
+  border-radius: 5px;
+  background: #e5ede9;
+  color: #285b49;
+  font-weight: 700;
+}

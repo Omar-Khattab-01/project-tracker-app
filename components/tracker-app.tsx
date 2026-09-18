@@ -9,6 +9,7 @@ import {
   CircleGauge,
   FolderKanban,
   GripVertical,
+  EyeOff,
   LayoutDashboard,
   MoreHorizontal,
   Plus,
@@ -522,6 +523,7 @@ function ProjectsView({
   const [expanded, setExpanded] = useState<number[]>([1]);
   const [status, setStatus] = useState('All statuses');
   const [priority, setPriority] = useState('All priorities');
+  const [hideCompleted, setHideCompleted] = useState(false);
   const filtered = projects.filter((p) => {
     const hay = (
       p.name +
@@ -584,9 +586,18 @@ function ProjectsView({
           onClick={() => {
             setStatus('All statuses');
             setPriority('All priorities');
+            setHideCompleted(false);
           }}
         >
           <RotateCcw size={13} /> Reset
+        </button>
+        <button
+          className={hideCompleted ? 'on' : ''}
+          aria-pressed={hideCompleted}
+          onClick={() => setHideCompleted((hidden) => !hidden)}
+        >
+          <EyeOff size={13} />
+          {hideCompleted ? 'Show completed tasks' : 'Hide completed tasks'}
         </button>
         <span>{filtered.length} projects</span>
       </div>
@@ -646,7 +657,11 @@ function ProjectsView({
                     </thead>
                     <tbody>
                       {p.tasks
-                        .filter((t) => !t.archived || t.percentComplete < 100)
+                        .filter(
+                          (t) =>
+                            (!t.archived || t.percentComplete < 100) &&
+                            (!hideCompleted || t.percentComplete < 100),
+                        )
                         .map((t) => (
                           <tr key={t.id}>
                             <td>
