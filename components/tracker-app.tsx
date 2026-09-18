@@ -187,7 +187,10 @@ export function TrackerApp({
         projects={active}
         query={query}
         setProjects={setProjects}
+        taskEditor={taskEditor}
         editTask={(projectId, task) => setTaskEditor({ projectId, task })}
+        closeTaskEditor={() => setTaskEditor(null)}
+        saveTask={saveTask}
       />
     ),
     timeline: (
@@ -271,7 +274,7 @@ export function TrackerApp({
         save={saveProject}
       />
       <TaskSheet
-        editor={taskEditor}
+        editor={taskEditor?.task ? taskEditor : null}
         projects={active}
         close={() => setTaskEditor(null)}
         save={saveTask}
@@ -513,12 +516,18 @@ function ProjectsView({
   projects,
   query,
   setProjects,
+  taskEditor,
   editTask,
+  closeTaskEditor,
+  saveTask,
 }: {
   projects: TrackerProject[];
   query: string;
   setProjects: React.Dispatch<React.SetStateAction<TrackerProject[]>>;
+  taskEditor: { projectId: number; task: TrackerTask | null } | null;
   editTask: (p: number, t: TrackerTask | null) => void;
+  closeTaskEditor: () => void;
+  saveTask: (t: TrackerTask) => void;
 }) {
   const [expanded, setExpanded] = useState<number[]>([1]);
   const [status, setStatus] = useState('All statuses');
@@ -543,6 +552,10 @@ function ProjectsView({
     setExpanded((xs) =>
       xs.includes(id) ? xs.filter((x) => x !== id) : [...xs, id],
     );
+  const startAddingTask = (projectId: number) => {
+    setExpanded((ids) => (ids.includes(projectId) ? ids : [...ids, projectId]));
+    editTask(projectId, null);
+  };
   const archiveProject = (id: number) => {
     setProjects((ps) =>
       ps.map((p) => (p.id === id ? { ...p, archived: true } : p)),
@@ -558,7 +571,9 @@ function ProjectsView({
         <button
           className="primary"
           disabled={projects.length === 0}
-          onClick={() => editTask(projects[0]?.id || 1, null)}
+          onClick={() =>
+            startAddingTask(filtered[0]?.id || projects[0]?.id || 1)
+          }
         >
           <Plus size={15} /> Add task
         </button>
@@ -604,7 +619,9 @@ function ProjectsView({
       <section className="project-list">
         {filtered.map((p) => {
           const m = projectMetrics(p);
-          const open = expanded.includes(p.id);
+          const open =
+            expanded.includes(p.id) ||
+            (taskEditor?.task === null && taskEditor.projectId === p.id);
           return (
             <article key={p.id} className="project-card">
               <div className="project-summary">
@@ -702,9 +719,19 @@ function ProjectsView({
                         ))}
                     </tbody>
                   </table>
+                  {taskEditor?.task === null &&
+                    taskEditor.projectId === p.id && (
+                      <TaskSheet
+                        inline
+                        editor={taskEditor}
+                        projects={projects}
+                        close={closeTaskEditor}
+                        save={saveTask}
+                      />
+                    )}
                   <button
                     className="add-row"
-                    onClick={() => editTask(p.id, null)}
+                    onClick={() => startAddingTask(p.id)}
                   >
                     <Plus size={14} /> Add task or milestone
                   </button>
@@ -1165,11 +1192,13 @@ function TaskSheet({
   projects,
   close,
   save,
+  inline = false,
 }: {
   editor: { projectId: number; task: TrackerTask | null } | null;
   projects: TrackerProject[];
   close: () => void;
   save: (t: TrackerTask) => void;
+  inline?: boolean;
 }) {
   const [progress, setProgress] = useState(0);
   useEffect(() => {
@@ -1185,6 +1214,190 @@ function TaskSheet({
       setProgress(Math.min(100, Math.max(0, Math.round(nextProgress))));
     }
   };
+  const form = (
+    <>
+      <button className="modal-close" onClick={close}>
+        <X size={16} />
+      </button>
+      <header>
+        <h3>{existing ? 'Edit task' : 'Add task'}</h3>
+        <p>
+          {inline
+            ? `Add work directly to ${projects.find((project) => project.id === editor.projectId)?.name || 'this project'}.`
+            : 'Changes flow through to dashboard health and the timeline automatically.'}
+        </p>
+      </header>
+      <div className="sheet-form">
+        <label className="inline-span-2">
+          Project
+          <select
+            id="t-project"
+            defaultValue={editor.projectId}
+            disabled={inline}
+          >
+            {projects.map((p) => (
+              <option value={p.id} key={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="inline-span-2">
+          Task / deliverable name
+          <textarea
+            id="t-name"
+            className="task-name-input"
+            rows={4}
+            defaultValue={existing?.name}
+          />
+        </label>
+        <div className="form-grid">
+          <label>
+            Type
+            <select id="t-type" defaultValue={existing?.type || 'Task'}>
+              <option>Task</option>
+              <option>Milestone</option>
+            </select>
+          </label>
+          <label>
+            Priority
+            <select
+              id="t-priority"
+              defaultValue={existing?.priority || 'Normal'}
+            >
+              {priorities.map((x) => (
+                <option key={x}>{x}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <label>
+          Work days
+          <input
+            id="t-work-days"
+            type="number"
+            min="1"
+            step="1"
+            defaultValue={existing?.workDays || ''}
+            placeholder="Calculated duration"
+          />
+        </label>
+        <div className="form-grid">
+          <label>
+            Start date
+            <input
+              id="t-start"
+              type="date"
+              defaultValue={existing?.startDate || todayIso}
+            />
+          </label>
+          <label>
+            Due date
+            <input
+              id="t-due"
+              type="date"
+              defaultValue={existing?.dueDate || ''}
+            />
+          </label>
+        </div>
+        <label className="progress-control inline-span-2">
+          <span className="progress-label">
+            Percent complete <output>{progress}%</output>
+          </span>
+          <span className="progress-inputs">
+            <input
+              id="t-progress"
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value={progress}
+              onChange={(event) => updateProgress(event.target.value)}
+            />
+            <span className="progress-number">
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                value={progress}
+                aria-label="Percent complete"
+                onChange={(event) => updateProgress(event.target.value)}
+              />
+              <span>%</span>
+            </span>
+          </span>
+        </label>
+        <label>
+          Owner
+          <input
+            id="t-owner"
+            defaultValue={existing?.owner || 'Project owner'}
+          />
+        </label>
+        <label>
+          Status override
+          <select
+            id="t-status"
+            defaultValue={existing?.manualStatusOverride || ''}
+          >
+            <option value="">Automatic</option>
+            <option>On Hold</option>
+            <option>Cancelled</option>
+          </select>
+        </label>
+        <label className="inline-span-2">
+          Latest update / notes
+          <textarea id="t-notes" defaultValue={existing?.notes} />
+        </label>
+      </div>
+      <footer>
+        <button
+          className="primary save"
+          onClick={() => {
+            const projectId = Number(get('#t-project'));
+            save({
+              id: existing?.id || Date.now(),
+              projectId,
+              name: get('#t-name') || 'Untitled task',
+              type: get('#t-type') as 'Task' | 'Milestone',
+              owner: get('#t-owner'),
+              startDate: get('#t-start') || null,
+              dueDate: get('#t-due') || null,
+              workDays: get('#t-work-days')
+                ? Number(get('#t-work-days'))
+                : null,
+              percentComplete: Number(get('#t-progress')),
+              priority: get('#t-priority') as Priority,
+              manualStatusOverride: (get('#t-status') ||
+                null) as TrackerTask['manualStatusOverride'],
+              notes: get('#t-notes'),
+              sortOrder: existing?.sortOrder || 999,
+              archived: existing?.archived || false,
+              baselineStartDate: existing?.baselineStartDate || null,
+              baselineEndDate: existing?.baselineEndDate || null,
+              predecessor: existing?.predecessor || null,
+              dependencyType: existing?.dependencyType || null,
+              dependencyLag: existing?.dependencyLag || null,
+            });
+          }}
+        >
+          Save task
+        </button>
+        {existing && (
+          <button
+            className="archive-action"
+            onClick={() => save({ ...existing, archived: true })}
+          >
+            <Archive size={13} /> Archive task
+          </button>
+        )}
+      </footer>
+    </>
+  );
+  if (inline) {
+    return <section className="task-sheet inline-task-editor">{form}</section>;
+  }
   return (
     <div
       className="overlay sheet-overlay"
@@ -1197,178 +1410,7 @@ function TaskSheet({
         aria-modal="true"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <button className="modal-close" onClick={close}>
-          <X size={16} />
-        </button>
-        <header>
-          <h3>{existing ? 'Edit task' : 'Create task'}</h3>
-          <p>
-            Changes flow through to dashboard health and the timeline
-            automatically.
-          </p>
-        </header>
-        <div className="sheet-form">
-          <label>
-            Project
-            <select id="t-project" defaultValue={editor.projectId}>
-              {projects.map((p) => (
-                <option value={p.id} key={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Task / deliverable name
-            <textarea
-              id="t-name"
-              className="task-name-input"
-              rows={4}
-              defaultValue={existing?.name}
-            />
-          </label>
-          <div className="form-grid">
-            <label>
-              Type
-              <select id="t-type" defaultValue={existing?.type || 'Task'}>
-                <option>Task</option>
-                <option>Milestone</option>
-              </select>
-            </label>
-            <label>
-              Priority
-              <select
-                id="t-priority"
-                defaultValue={existing?.priority || 'Normal'}
-              >
-                {priorities.map((x) => (
-                  <option key={x}>{x}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <label>
-            Work days
-            <input
-              id="t-work-days"
-              type="number"
-              min="1"
-              step="1"
-              defaultValue={existing?.workDays || ''}
-              placeholder="Calculated duration"
-            />
-          </label>
-          <div className="form-grid">
-            <label>
-              Start date
-              <input
-                id="t-start"
-                type="date"
-                defaultValue={existing?.startDate || todayIso}
-              />
-            </label>
-            <label>
-              Due date
-              <input
-                id="t-due"
-                type="date"
-                defaultValue={existing?.dueDate || ''}
-              />
-            </label>
-          </div>
-          <label className="progress-control">
-            <span className="progress-label">
-              Percent complete <output>{progress}%</output>
-            </span>
-            <span className="progress-inputs">
-              <input
-                id="t-progress"
-                type="range"
-                min="0"
-                max="100"
-                step="1"
-                value={progress}
-                onChange={(event) => updateProgress(event.target.value)}
-              />
-              <span className="progress-number">
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="1"
-                  value={progress}
-                  aria-label="Percent complete"
-                  onChange={(event) => updateProgress(event.target.value)}
-                />
-                <span>%</span>
-              </span>
-            </span>
-          </label>
-          <label>
-            Owner
-            <input
-              id="t-owner"
-              defaultValue={existing?.owner || 'Project owner'}
-            />
-          </label>
-          <label>
-            Status override
-            <select
-              id="t-status"
-              defaultValue={existing?.manualStatusOverride || ''}
-            >
-              <option value="">Automatic</option>
-              <option>On Hold</option>
-              <option>Cancelled</option>
-            </select>
-          </label>
-          <label>
-            Latest update / notes
-            <textarea id="t-notes" defaultValue={existing?.notes} />
-          </label>
-        </div>
-        <footer>
-          <button
-            className="primary save"
-            onClick={() => {
-              const projectId = Number(get('#t-project'));
-              save({
-                id: existing?.id || Date.now(),
-                projectId,
-                name: get('#t-name') || 'Untitled task',
-                type: get('#t-type') as 'Task' | 'Milestone',
-                owner: get('#t-owner'),
-                startDate: get('#t-start') || null,
-                dueDate: get('#t-due') || null,
-                workDays: get('#t-work-days')
-                  ? Number(get('#t-work-days'))
-                  : null,
-                percentComplete: Number(get('#t-progress')),
-                priority: get('#t-priority') as Priority,
-                manualStatusOverride: (get('#t-status') ||
-                  null) as TrackerTask['manualStatusOverride'],
-                notes: get('#t-notes'),
-                sortOrder: existing?.sortOrder || 999,
-                archived: existing?.archived || false,
-                baselineStartDate: existing?.baselineStartDate || null,
-                baselineEndDate: existing?.baselineEndDate || null,
-                predecessor: existing?.predecessor || null,
-                dependencyType: existing?.dependencyType || null,
-                dependencyLag: existing?.dependencyLag || null,
-              });
-            }}
-          >
-            Save task
-          </button>
-          {existing && (
-            <button
-              className="archive-action"
-              onClick={() => save({ ...existing, archived: true })}
-            >
-              <Archive size={13} /> Archive task
-            </button>
-          )}
-        </footer>
+        {form}
       </section>
     </div>
   );
