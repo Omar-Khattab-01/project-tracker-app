@@ -1,4 +1,4 @@
-.timeline {
+.timeline.panel {
   --timeline-label-width: 330px;
   --timeline-track-width: 800px;
   --timeline-period-width: 160px;
