@@ -1,6 +1,6 @@
 # Project Tracker
 
-Live: https://project-tracker-web-app.web.app
+Live: https://project-tracker-online.web.app
 
 Firebase project: `project-tracker-837f9` (Spark). Hosting, email/password Authentication and Firestore are configured without a billing upgrade. Source belongs to Omar-Khattab-01.
 
