@@ -711,10 +711,34 @@ function Timeline({
   editTask: (p: number, t: TrackerTask) => void;
 }) {
   const [view, setView] = useState<'Week' | 'Month'>('Month');
-  const start = new Date('2026-08-17T12:00:00'),
-    end = new Date(
-      view === 'Month' ? '2026-12-28T12:00:00' : '2026-10-12T12:00:00',
-    );
+  const scheduleDates = projects
+    .flatMap((project) => [
+      project.startDate,
+      project.targetEndDate,
+      ...project.tasks.flatMap((task) => [task.startDate, task.dueDate]),
+    ])
+    .filter((date): date is string => Boolean(date));
+  const parsedDates = (scheduleDates.length ? scheduleDates : [todayIso]).map(
+    (date) => new Date(`${date}T00:00:00Z`),
+  );
+  const firstDate = new Date(
+    Math.min(...parsedDates.map((date) => date.getTime())),
+  );
+  const lastDate = new Date(
+    Math.max(...parsedDates.map((date) => date.getTime())),
+  );
+  const start = new Date(firstDate);
+  const end = new Date(lastDate);
+  if (view === 'Month') {
+    start.setUTCDate(1);
+    end.setUTCDate(1);
+    end.setUTCMonth(end.getUTCMonth() + 1);
+  } else {
+    const startOffset = (start.getUTCDay() + 6) % 7;
+    start.setUTCDate(start.getUTCDate() - startOffset);
+    const endOffset = (end.getUTCDay() + 6) % 7;
+    end.setUTCDate(end.getUTCDate() + (7 - endOffset));
+  }
   const span = end.getTime() - start.getTime();
   const pos = (d: string | null) =>
     d
@@ -722,12 +746,38 @@ function Timeline({
           0,
           Math.min(
             100,
-            ((new Date(d + 'T12:00:00').getTime() - start.getTime()) / span) *
+            ((new Date(`${d}T00:00:00Z`).getTime() - start.getTime()) / span) *
               100,
           ),
         )
       : 0;
-  const months = ['Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const periods: { key: string; label: string }[] = [];
+  const cursor = new Date(start);
+  while (cursor < end) {
+    periods.push({
+      key: cursor.toISOString(),
+      label:
+        view === 'Month'
+          ? new Intl.DateTimeFormat('en-CA', {
+              month: 'short',
+              year: 'numeric',
+              timeZone: 'UTC',
+            }).format(cursor)
+          : new Intl.DateTimeFormat('en-CA', {
+              month: 'short',
+              day: 'numeric',
+              timeZone: 'UTC',
+            }).format(cursor),
+    });
+    if (view === 'Month') cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+    else cursor.setUTCDate(cursor.getUTCDate() + 7);
+  }
+  const periodWidth = view === 'Month' ? 150 : 100;
+  const trackWidth = Math.max(800, periods.length * periodWidth);
+  const timelineStyle = {
+    '--timeline-track-width': `${trackWidth}px`,
+    '--timeline-period-width': `${trackWidth / periods.length}px`,
+  } as React.CSSProperties;
   return (
     <div className="content timeline-page">
       <section className="heading-row">
@@ -752,12 +802,12 @@ function Timeline({
           </button>
         </div>
       </section>
-      <section className="timeline panel">
+      <section className="timeline panel" style={timelineStyle}>
         <div className="timeline-head">
           <div>Project / task</div>
           <div className="months">
-            {months.slice(0, view === 'Month' ? 5 : 3).map((m) => (
-              <span key={m}>{m}</span>
+            {periods.map((period) => (
+              <span key={period.key}>{period.label}</span>
             ))}
           </div>
         </div>
@@ -765,7 +815,7 @@ function Timeline({
           <div
             className="today-line"
             style={{
-              left: `calc(330px + (100% - 330px) * ${pos(todayIso) / 100})`,
+              left: `${330 + trackWidth * (pos(todayIso) / 100)}px`,
             }}
           >
             <span>Today</span>

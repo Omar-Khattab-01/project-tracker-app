@@ -1,0 +1,62 @@
+.timeline {
+  --timeline-label-width: 330px;
+  --timeline-track-width: 800px;
+  --timeline-period-width: 160px;
+  max-height: calc(100vh - 160px);
+  overflow: auto;
+  position: relative;
+}
+
+.timeline-head,
+.gantt-project,
+.gantt-task {
+  grid-template-columns: var(--timeline-label-width) var(--timeline-track-width);
+  min-width: 100%;
+  width: max-content;
+}
+
+.timeline-head {
+  top: 0;
+  z-index: 10;
+}
+
+.timeline-head > div:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 12;
+  background: #f7f8f7;
+  border-right: 1px solid var(--line);
+}
+
+.months {
+  width: var(--timeline-track-width);
+}
+
+.months span {
+  flex: 0 0 var(--timeline-period-width);
+}
+
+.timeline-body {
+  min-width: calc(var(--timeline-label-width) + var(--timeline-track-width));
+  width: max-content;
+}
+
+.gantt-project > div:first-child,
+.gantt-task > div:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  border-right: 1px solid var(--line);
+}
+
+.gantt-project > div:first-child {
+  background: #fafcfb;
+}
+
+.gantt-task > div:first-child {
+  background: #fff;
+}
+
+.gantt-task:hover > div:first-child {
+  background: #fafcfb;
+}
