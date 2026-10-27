@@ -1,21 +1,31 @@
 # Project Tracker
 
-Live: https://project-tracker-online.web.app
+I built Project Tracker to see projects, tasks, deadlines, and milestones together. I wanted a clear view of what is moving, what needs attention, and how individual tasks fit into a wider schedule.
 
-Firebase project: `project-tracker-837f9` (Spark). Hosting, email/password Authentication and Firestore are configured without a billing upgrade. Source belongs to Omar-Khattab-01.
+The app combines a portfolio dashboard, detailed project lists, and a timeline in a personal account workspace.
 
-## Data model and privacy
+[Open Project Tracker](https://project-tracker-online.web.app)
 
-Each signed-in user owns `workspaces/{uid}`. Firestore rules enforce ownership, reject anonymous access and validate the document envelope. Writes use transactions so changes are applied to the latest cloud state. Sign-out removes the workspace from the UI. No old browser data is uploaded automatically.
+## What it does
 
-Users start with an empty portfolio. Accounts are isolated: this version does not support invitations or shared team projects. Each workspace is stored in one document, with an application limit of 850 KB of serialized projects. This is suitable for small portfolios; split projects/tasks into separate documents before larger-scale use. Use Export backup to download your data.
+- Create and edit projects, tasks, and milestones.
+- Track owners, priorities, dates, progress, and notes.
+- Review overdue work, upcoming deadlines, and calculated project health.
+- Search across projects, tasks, and notes, with status and priority filters.
+- Compare schedules in week and month timeline views.
+- Record task dependencies and scheduling details.
+- Archive projects and tasks, then restore them when needed.
+- Save a workspace to an account and export a backup.
 
-## Develop and deploy
+## Main areas
 
-Use Node 24 and pnpm 11.19.0. Run `pnpm install`, then `pnpm dev`. The default build targets the GitHub Pages repository path. Build for Firebase with `DEPLOY_TARGET=firebase pnpm build`, then `firebase deploy --only hosting:project-tracker,firestore:rules --project project-tracker-837f9` after `firebase login`.
+- **Dashboard:** Review portfolio progress, deadlines, and projects that need attention.
+- **Projects:** Expand a project to inspect its tasks, update details, or add new work.
+- **Timeline:** See project and task dates together across the portfolio.
+- **Archive:** Keep historical work available without crowding the active views.
 
-`node scripts/test-firebase.mjs` creates two temporary test accounts, checks persistence and cross-account/anonymous denials against the live database, then removes only those test accounts and their test document. Do not run this against another Firebase project.
+## Workspace scope
 
-Firebase web configuration is public, not an administrative credential. Never commit CLI tokens, OAuth codes, service-account keys or passwords. Firebase Hosting deployments currently run from the authenticated CLI; GitHub Pages continues using its existing workflow.
+Each account has its own workspace. The current app is intended for individual project portfolios and does not include invitations or shared team projects.
 
-The Spark plan is quota-limited. No paid services, Cloud Functions, file storage or automatic billing upgrade are configured. It is not an unlimited-service guarantee.
+Project health is calculated from task dates, priorities, and completion. I use it as a prompt to review the underlying work, rather than as an automatic assessment of delivery.
